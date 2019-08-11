@@ -18,7 +18,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".Service"
+            android:name=".WeatherService"
             android:enabled="true"
             android:exported="true" >
         </service>
