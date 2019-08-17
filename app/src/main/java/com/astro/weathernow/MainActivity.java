@@ -12,66 +12,46 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.astro.weathernow.interfaces.OpenWeather;
-import com.astro.weathernow.model.WeatherRequest;
+import io.realm.Realm;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedPref;
-    private OpenWeather openWeather;
     private static final String WEATHER_LOCATION = "location";
-    public String WEATHER_LOCATION_DEFAULT = "Irkutsk";
+    private static String WEATHER_LOCATION_DEFAULT = "Irkutsk";
 
     TextView cityField, detailsField, currentTemperatureField, humidity_field, pressure_field, updatedField;
     ImageView selectCity;
     TextView temperature;
-    String  OPEN_WEATHER_MAP_API = "acfe5130bfbb7a72e0c1dc06e1c2d5c7";
+    Intent weatherService;
+    WeatherBroadcastReceiver weatherReceiver;
+    String OPEN_WEATHER_MAP_API = "acfe5130bfbb7a72e0c1dc06e1c2d5c7";
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
+        Realm.init(this);
         getSupportActionBar().hide();
         setContentView(R.layout.activity_main);
 
 
-        initRetrofit();
+        //      initRetrofit();
         initGui();
+
         initPreferences();
+
+        // requestRetrofit(sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT), OPEN_WEATHER_MAP_API);
+        startWeatherService();
         initEvents();
-        requestRetrofit(WEATHER_LOCATION_DEFAULT, OPEN_WEATHER_MAP_API);
+
+        
+      //  Picasso picasso = Picasso.with(this);
+    //    picasso.load("https://img1.goodfon.ru/original/2560x1600/8/84/peyzazhi-priroda-trava-holmy.jpg")
+     //           .into((ImageView) findViewById(R.id.background_view));
+
 
     }
-
-    private void initPreferences() {
-        sharedPref = getPreferences(MODE_PRIVATE);
-        loadPreferences();                   // Загрузить настройки
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        savePreferences();
-    }
-
-    private void savePreferences() {
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
-        editor.commit();
-    }
-
-    private void loadPreferences() {
-
-        sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
-
-    }
-
 
     private void initGui() {
         selectCity = findViewById(R.id.imageView);
@@ -81,7 +61,6 @@ public class MainActivity extends AppCompatActivity {
         pressure_field = findViewById(R.id.pressure_field);
         temperature = findViewById(R.id.current_temperature_field);
     }
-
 
     // Обработка клика
     private void initEvents() {
@@ -93,15 +72,22 @@ public class MainActivity extends AppCompatActivity {
                 AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
                 alertDialog.setTitle(getString(R.string.сhange_сity));
                 final EditText input = new EditText(MainActivity.this);
-                input.setText(sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT));
+                input.setText(sharedPref.getString(WEATHER_LOCATION, cityField.getText().toString()));
                 alertDialog.setView(input);
 
                 alertDialog.setPositiveButton(getString(R.string.change),
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
+
+
                                 WEATHER_LOCATION_DEFAULT = input.getText().toString();
+                                //   savePreferences();
+                                //   requestRetrofit(WEATHER_LOCATION_DEFAULT, OPEN_WEATHER_MAP_API);
+
                                 savePreferences();
-                                requestRetrofit(WEATHER_LOCATION_DEFAULT, OPEN_WEATHER_MAP_API);
+                                stopService(weatherService);
+                                startWeatherService();
+
                             }
                         });
 
@@ -116,6 +102,89 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
+
+    private void initPreferences() {
+        sharedPref = getPreferences(MODE_PRIVATE);
+        loadPreferences();
+
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        savePreferences();
+    }
+
+    private void savePreferences() {
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
+        editor.commit();
+
+    }
+
+    private void loadPreferences() {
+        sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter intentFilter = new IntentFilter(
+                WeatherService.ACTION_WEATHER_UPDATED);
+        intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
+        registerReceiver(weatherReceiver, intentFilter);
+        startWeatherService();
+    }
+
+    private void startWeatherService() {
+        weatherService = new Intent(MainActivity.this, WeatherService.class);
+
+        weatherService.putExtra(WeatherService.EXTRA_LOCATION, sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT));
+        startService(weatherService);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopService(weatherService);
+        unregisterReceiver(weatherReceiver);
+    }
+
+
+/*
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        savePreferences();
+    }
+
+    private void initPreferences() {
+        sharedPref = getPreferences(MODE_PRIVATE);
+        loadPreferences();
+
+    }
+
+    private void savePreferences() {
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
+        //editor.apply();
+        editor.commit();
+    }
+
+    private void loadPreferences() {
+
+        sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT);
+
+
+    }
+
+
+
+
+
+
 
 
     private void initRetrofit() {
@@ -132,24 +201,25 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestRetrofit(final String city, String keyApi) {
         openWeather.loadWeather(city, keyApi)
-                .enqueue(new Callback<WeatherRequest>() {
+                .enqueue(new Callback<WeatherResponse>() {
                     @Override
-                    public void onResponse(Call<WeatherRequest> call, Response<WeatherRequest> response) {
+                    public void onResponse(Call<WeatherResponse> call, Response<WeatherResponse> response) {
                         if (response.body() != null) {
                             double tmp = response.body().getMain().getTemp() - 273.15;
                             int tmpint = (int) tmp;
                             temperature.setText(tmpint + " C°");
-                            cityField.setText(WEATHER_LOCATION_DEFAULT);
+                            cityField.setText(sharedPref.getString(WEATHER_LOCATION, WEATHER_LOCATION_DEFAULT));
+                            // cityField.setText(WEATHER_LOCATION_DEFAULT);
                         }
 
                     }
 
                     @Override
-                    public void onFailure(Call<WeatherRequest> call, Throwable t) {
+                    public void onFailure(Call<WeatherResponse> call, Throwable t) {
                         temperature.setText("Error");
                     }
                 });
 
     }
-
+*/
 }

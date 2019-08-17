@@ -3,7 +3,7 @@ package com.astro.weathernow.model;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class WeatherRequest {
+public class WeatherResponse {
     @SerializedName("coord")
     @Expose
     private Coord coord;
