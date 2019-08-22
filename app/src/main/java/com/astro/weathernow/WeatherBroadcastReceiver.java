@@ -9,6 +9,7 @@ import android.widget.TextView;
 public class WeatherBroadcastReceiver extends BroadcastReceiver {
     TextView temperature;
     TextView humidity;
+
     WeatherBroadcastReceiver(Activity activity){
         this.temperature = activity.findViewById(R.id.current_temperature_field);
         this.humidity = activity.findViewById(R.id.humidity_field);

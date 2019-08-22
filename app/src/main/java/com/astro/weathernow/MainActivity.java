@@ -12,8 +12,14 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.squareup.picasso.Picasso;
+
 import io.realm.Realm;
 
+
+// 1. Не показывает ни температуру ни влажность. Думаю, дело в сервисе. Не знаю как делать
+// 2. Как сделать, чтобы показывался город после ввода? В WeatherBroadcastReceiver сделать наподобие показа температуры и влажности?
+// Но тогда как правильно это сделать, чтобы все работало?
 
 public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedPref;
@@ -45,10 +51,10 @@ public class MainActivity extends AppCompatActivity {
         startWeatherService();
         initEvents();
 
-        
-      //  Picasso picasso = Picasso.with(this);
-    //    picasso.load("https://img1.goodfon.ru/original/2560x1600/8/84/peyzazhi-priroda-trava-holmy.jpg")
-     //           .into((ImageView) findViewById(R.id.background_view));
+
+        Picasso picasso = Picasso.with(this);
+        picasso.load("https://img1.goodfon.ru/original/2560x1600/8/84/peyzazhi-priroda-trava-holmy.jpg")
+               .into((ImageView) findViewById(R.id.background_view));
 
 
     }
